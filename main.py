@@ -1,6 +1,6 @@
 """
-🚀 بوت "عِلم" - النسخة النهائية
---------------------------------
+🚀 بوت "عِلم" - النسخة النهائية المُصلحة
+-----------------------------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
 """
@@ -55,9 +55,18 @@ WELCOME_MESSAGE = f"""
 """
 
 # ====== دالة إرسال الرسائل ======
-async def send_message(chat_id, text):
+async def send_message_async(chat_id, text):
     """إرسال رسالة بشكل async"""
     await bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
+
+def send_message(chat_id, text):
+    """إرسال رسالة بشكل متزامن"""
+    try:
+        asyncio.run(send_message_async(chat_id, text))
+    except RuntimeError:
+        # إذا كان هناك loop قيد التشغيل
+        loop = asyncio.get_event_loop()
+        loop.create_task(send_message_async(chat_id, text))
 
 # ====== Webhook Endpoint ======
 @app.route('/')
@@ -73,20 +82,14 @@ def webhook():
             chat_id = update.message.chat_id
             text = update.message.text or ""
             
-            # إنشاء event loop جديد
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            
             if text == "/start":
-                loop.run_until_complete(send_message(chat_id, WELCOME_MESSAGE))
+                send_message(chat_id, WELCOME_MESSAGE)
             elif text == "/help":
-                loop.run_until_complete(send_message(chat_id, "🆘 *المساعدة*\n\nجرب: /start"))
+                send_message(chat_id, "🆘 *المساعدة*\n\nجرب: /start")
             elif text == "/calc":
-                loop.run_until_complete(send_message(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:"))
+                send_message(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:")
             else:
-                loop.run_until_complete(send_message(chat_id, f"🤔 فهمتك: {text}\n\nجرب /start"))
-            
-            loop.close()
+                send_message(chat_id, f"🤔 فهمتك: {text}\n\nجرب /start")
         
         return jsonify({'ok': True})
     except Exception as e:
@@ -97,4 +100,3 @@ def webhook():
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', '10000'))
     app.run(host='0.0.0.0', port=PORT)
-
