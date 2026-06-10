@@ -1,5 +1,5 @@
 """
-🚀 بوت "عِلم" - النسخة النهائية المُصلحة
+🚀 بوت "عِلم" - النسخة النهائية بدون asyncio
 -----------------------------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
@@ -7,7 +7,7 @@
 
 import os
 import logging
-import asyncio
+import threading
 from flask import Flask, request, jsonify
 from telegram import Bot, Update
 
@@ -54,19 +54,18 @@ WELCOME_MESSAGE = f"""
 🏛️ *{COLLEGE_NAME}*
 """
 
-# ====== دالة إرسال الرسائل ======
-async def send_message_async(chat_id, text):
-    """إرسال رسالة بشكل async"""
-    await bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
+# ====== دالة إرسال الرسائل في thread منفصل ======
+def send_message_thread(chat_id, text):
+    """إرسال رسالة في thread منفصل"""
+    try:
+        bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
+    except Exception as e:
+        logger.error(f"❌ خطأ في الإرسال: {e}")
 
 def send_message(chat_id, text):
     """إرسال رسالة بشكل متزامن"""
-    try:
-        asyncio.run(send_message_async(chat_id, text))
-    except RuntimeError:
-        # إذا كان هناك loop قيد التشغيل
-        loop = asyncio.get_event_loop()
-        loop.create_task(send_message_async(chat_id, text))
+    thread = threading.Thread(target=send_message_thread, args=(chat_id, text))
+    thread.start()
 
 # ====== Webhook Endpoint ======
 @app.route('/')
