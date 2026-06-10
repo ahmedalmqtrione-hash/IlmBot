@@ -1,6 +1,6 @@
 """
-🚀 بوت "عِلم" - النسخة المتكاملة
---------------------------------
+🚀 بوت "عِلم" - النسخة المتكاملة المُصلحة
+-------------------------------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
 """
@@ -53,18 +53,27 @@ init_db()
 DEVELOPER_NAME = "أحمد حمدي أحمد عثمان المقطري"
 CONTACT_NUMBERS = ["771267564", "738805009"]
 
+# ====== رسالة الترحيب القوية ======
 WELCOME_MESSAGE = f"""🎓 *مرحباً بك في بوت "عِلم"*
 
 أنا ذكاءك الأكاديمي الشخصي! 🤖
 
-📚 *الميزات:*
-• 🔢 حل المعادلات الرياضية
+📚 *ما يمكنني فعله:*
+• 🔢 حل المعادلات الرياضية خطوة بخطوة
 • 👨‍🏫 البحث عن الدكاترة والمواد
-• 📸 قراءة الصور (OCR)
-• 🧠 الرد الذكي
-• 🎓 التنقل بين السنوات والترمات
+• 📸 قراءة المعادلات من الصور (OCR)
+• 🎥 عرض المحاضرات والفيديوهات
+• 📄 تحميل الملفات والامتحانات
+• 🧠 فهم أسئلتك والرد بذكاء
 
-🎯 *اختر السنة الدراسية:*
+🎯 *ابدأ رحلتك:*
+اضغط /start للتنقل بين السنوات والترمات
+أو اكتب اسم الدكتور مباشرة!
+
+─────────────────
+👨‍💻 *المطور:* {DEVELOPER_NAME}
+📞 *للاستفسارات:* {', '.join(CONTACT_NUMBERS)}
+🏛️ *{COLLEGE_NAME}*
 """
 
 # ====== دالة إرسال الرسائل ======
@@ -89,15 +98,14 @@ def get_years_buttons():
         [{"text": "📚 السنة الرابعة", "callback_data": "year:4"}],
         [{"text": "🔢 آلة حاسبة", "callback_data": "calc"}],
         [{"text": "📸 حل من صورة", "callback_data": "ocr"}],
-        [{"text": "👨‍🏫 البحث عن دكتور", "callback_data": "search"}],
-        [{"text": "👑 لوحة المدير", "callback_data": "admin"}]
+        [{"text": "👨‍🏫 البحث عن دكتور", "callback_data": "search"}]
     ]
 
 def get_terms_buttons(year):
     return [
         [{"text": "📖 الترم الأول", "callback_data": f"term:{year}:1"}],
         [{"text": "📖 الترم الثاني", "callback_data": f"term:{year}:2"}],
-        [{"text": "🔙 رجوع", "callback_data": "back:years"}]
+        [{"text": "🔙 رجوع للسنوات", "callback_data": "back:years"}]
     ]
 
 # ====== Webhook ======
@@ -110,41 +118,56 @@ def webhook():
     try:
         data = request.get_json(force=True)
         
+        # ====== معالجة الرسائل النصية ======
         if "message" in data:
             chat_id = data["message"]["chat"]["id"]
             text = data["message"].get("text", "")
+            user_id = data["message"]["from"]["id"]
             
+            # ✅ الأوامر (تبدأ بـ /)
             if text == "/start":
                 send_msg(chat_id, WELCOME_MESSAGE, get_years_buttons())
             
             elif text == "/help":
-                send_msg(chat_id, "🆘 *المساعدة*\n\n/start - الرئيسية\n/calc - آلة حاسبة\n/admin - لوحة المدير")
+                send_msg(chat_id, "🆘 *مركز المساعدة*\n\n/start - الرئيسية\n/calc - آلة حاسبة\n/admin - لوحة تحكم المدير\n\n💡 اكتب اسم الدكتور للبحث!")
             
             elif text == "/calc":
-                send_msg(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة مثل:\n`2*x + 3 = 7`\n`x**2 + 5*x - 6`")
+                send_msg(chat_id, "🔢 *آلة حاسبة ذكية*\n\nأرسل المعادلة:\n`2*x + 3 = 7`\n`x**2 + 5*x - 6`\n`diff(x**2, x)` - مشتقة\n`integrate(x, x)` - تكامل")
             
             elif text == "/admin":
-                send_msg(chat_id, "👑 *لوحة تحكم المدير*\n\n🔐 أرسل رمز الدخول:")
+                # التحقق من هوية المدير
+                if str(user_id) == str(ADMIN_ID):
+                    send_msg(chat_id, "👑 *لوحة تحكم المدير*\n\n🔐 أرسل رمز الدخول:", [
+                        [{"text": "🔙 إلغاء", "callback_data": "cancel"}]
+                    ])
+                else:
+                    send_msg(chat_id, "🚫 *غير مصرح!*\n\nهذه المنطقة محمية. تم تسجيل محاولتك.")
             
-            elif text.startswith("/calc "):
-                # حل المعادلة
-                try:
-                    expr = text[6:]
-                    # هنا نضيف حل المعادلات لاحقاً
-                    send_msg(chat_id, f"🔢 *المعادلة:* `{expr}`\n\n⏳ جاري الحل...")
-                except:
-                    send_msg(chat_id, "❌ خطأ في المعادلة")
+            # ✅ رمز الدخول (4-6 أرقام)
+            elif text == ADMIN_SECRET_CODE:
+                if str(user_id) == str(ADMIN_ID):
+                    send_msg(chat_id, "✅ *تم تسجيل الدخول!*\n\n👑 مرحباً يا صاحب النظام!\n\n*لوحة التحكم:*", [
+                        [{"text": "➕ إضافة دكتور", "callback_data": "add_prof"}],
+                        [{"text": "📊 الإحصائيات", "callback_data": "stats"}],
+                        [{"text": "📢 إرسال إشعار", "callback_data": "broadcast"}],
+                        [{"text": "📋 قائمة الدكاترة", "callback_data": "list_profs"}],
+                        [{"text": "🗑️ حذف محتوى", "callback_data": "delete"}],
+                        [{"text": "🔒 تسجيل الخروج", "callback_data": "logout"}]
+                    ])
+                else:
+                    send_msg(chat_id, "❌ *رمز خاطئ!*")
             
+            # ✅ البحث العادي
             else:
                 # البحث الذكي
-                send_msg(chat_id, f"🤔 *بحث عن:* `{text}`\n\nجاري البحث في الدكاترة...", [
-                    [{"text": "🔍 بحث متقدم", "callback_data": f"search:{text}"}]
+                send_msg(chat_id, f"🤔 *بحث عن:* `{text}`\n\nجاري البحث في الدكاترة والمواد...", [
+                    [{"text": "🔍 بحث متقدم", "callback_data": f"search:{text}"}],
+                    [{"text": "📚 التنقل بين السنوات", "callback_data": "back:years"}]
                 ])
         
-        # معالجة الأزرار (Callback)
+        # ====== معالجة الأزرار (Callback) ======
         elif "callback_query" in data:
             chat_id = data["callback_query"]["message"]["chat"]["id"]
-            msg_id = data["callback_query"]["message"]["message_id"]
             callback = data["callback_query"]["data"]
             
             if callback.startswith("year:"):
@@ -155,26 +178,40 @@ def webhook():
             elif callback.startswith("term:"):
                 parts = callback.split(":")
                 year, term = parts[1], parts[2]
-                send_msg(chat_id, f"👨‍🏫 *دكاترة السنة {year} - الترم {term}*\n\n⚠️ لا يوجد دكاترة مسجلين بعد.\n\nيمكنك إضافتهم من لوحة التحكم.", [
+                term_names = {"1": "الأول", "2": "الثاني"}
+                send_msg(chat_id, f"👨‍🏫 *دكاترة السنة {year} - الترم {term_names.get(term, term)}*\n\n⚠️ لا يوجد دكاترة مسجلين بعد.\n\nيمكنك إضافتهم من لوحة التحكم (/admin)", [
                     [{"text": "➕ إضافة دكتور", "callback_data": f"add_prof:{year}:{term}"}],
                     [{"text": "🔙 رجوع", "callback_data": f"back:year:{year}"}]
                 ])
             
             elif callback == "calc":
-                send_msg(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:\n\n`2*x + 3 = 7`\n`x**2 + 5*x - 6`\n`diff(x**2, x)` - مشتقة\n`integrate(x, x)` - تكامل")
+                send_msg(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:\n\n`2*x + 3 = 7`\n`x**2 + 5*x - 6`")
             
             elif callback == "ocr":
-                send_msg(chat_id, "📸 *OCR - قراءة الصور*\n\nأرسل صورة معادلة وسأقرأها وأحلها!\n\n⚠️ تأكد أن الصورة واضحة.")
+                send_msg(chat_id, "📸 *OCR - قراءة الصور*\n\nأرسل صورة معادلة وسأقرأها وأحلها!")
             
             elif callback == "search":
                 send_msg(chat_id, "🔍 *البحث عن دكتور*\n\nاكتب اسم الدكتور أو المادة:")
             
-            elif callback == "admin":
-                send_msg(chat_id, "👑 *لوحة تحكم المدير*\n\n🔐 أرسل رمز الدخول (4 أرقام):")
+            elif callback == "add_prof":
+                send_msg(chat_id, "➕ *إضافة دكتور*\n\nأرسل البيانات بالشكل:\n\n`اسم الدكتور | السنة | الترم | المادة`")
+            
+            elif callback == "stats":
+                send_msg(chat_id, "📊 *الإحصائيات*\n\nجاري جلب البيانات...")
+            
+            elif callback == "broadcast":
+                send_msg(chat_id, "📢 *إرسال إشعار*\n\nاكتب الرسالة التي تريد إرسالها للجميع:")
+            
+            elif callback == "logout":
+                send_msg(chat_id, "🔒 *تم تسجيل الخروج*")
             
             elif callback.startswith("back:"):
                 if callback == "back:years":
                     send_msg(chat_id, WELCOME_MESSAGE, get_years_buttons())
+                elif callback.startswith("back:year:"):
+                    year = callback.split(":")[2]
+                    year_names = {"1": "الأولى", "2": "الثانية", "3": "الثالثة", "4": "الرابعة"}
+                    send_msg(chat_id, f"📚 *السنة {year_names.get(year, year)}*\n\nاختر الترم:", get_terms_buttons(year))
         
         return jsonify({'ok': True})
     except Exception as e:
