@@ -9,6 +9,7 @@ import os
 import sys
 import logging
 import sqlite3
+import asyncio
 from dotenv import load_dotenv
 
 # تحميل المتغيرات
@@ -407,6 +408,9 @@ if __name__ == '__main__':
         
         logger.info(f"🌐 Webhook URL: {WEBHOOK_FULL_URL}")
         
+        # إنشاء event loop جديد
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        
         application.run_webhook(
             listen="0.0.0.0",
             port=PORT,
@@ -417,4 +421,3 @@ if __name__ == '__main__':
         # تشغيل محلي (Polling)
         logger.info("🏠 تشغيل محلي (Polling)")
         application.run_polling()
-
