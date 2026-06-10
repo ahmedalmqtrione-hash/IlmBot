@@ -408,14 +408,10 @@ if __name__ == '__main__':
         
         logger.info(f"🌐 Webhook URL: {WEBHOOK_FULL_URL}")
         
-        # إنشاء event loop جديد
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        
         application.run_webhook(
             listen="0.0.0.0",
             port=PORT,
-            webhook_url=WEBHOOK_FULL_URL,
-            secret_token=BOT_TOKEN
+            webhook_url=WEBHOOK_FULL_URL
         )
     else:
         # تشغيل محلي (Polling)
