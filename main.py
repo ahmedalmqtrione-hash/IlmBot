@@ -1,6 +1,6 @@
 """
-🚀 بوت "عِلم" - النسخة المتكاملة المُصلحة
--------------------------------------------
+🚀 بوت "عِلم" - النسخة الحقيقية العاملة
+-----------------------------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
 """
@@ -8,8 +8,24 @@
 import os
 import logging
 import sqlite3
+import re
 from flask import Flask, request, jsonify
 import requests
+
+# ====== استيراد مكتبات حقيقية ======
+try:
+    from sympy import sympify, solve, simplify, latex, diff, integrate
+    from sympy.parsing.sympy_parser import parse_expr
+    SYMPY_AVAILABLE = True
+except:
+    SYMPY_AVAILABLE = False
+
+try:
+    from PIL import Image
+    import pytesseract
+    OCR_AVAILABLE = True
+except:
+    OCR_AVAILABLE = False
 
 # إعداد التسجيل
 logging.basicConfig(level=logging.INFO)
@@ -28,32 +44,98 @@ if not BOT_TOKEN:
 # إنشاء Flask
 app = Flask(__name__)
 
-# ====== قاعدة البيانات ======
+# ====== قاعدة البيانات الحقيقية ======
 def init_db():
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
     
+    # جدول الدكاترة
     c.execute('''CREATE TABLE IF NOT EXISTS professors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT, year TEXT, term TEXT, subject TEXT)''')
+        name TEXT NOT NULL,
+        year TEXT NOT NULL,
+        term TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     
+    # جدول المحتوى (محاضرات، فيديوهات، ملفات، امتحانات)
     c.execute('''CREATE TABLE IF NOT EXISTS content (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        prof_id INTEGER, type TEXT, title TEXT, url TEXT)''')
+        prof_id INTEGER,
+        type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        url TEXT,
+        file_path TEXT,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (prof_id) REFERENCES professors (id))''')
     
+    # جدول الطلاب
     c.execute('''CREATE TABLE IF NOT EXISTS students (
-        id INTEGER PRIMARY KEY, name TEXT, points INTEGER DEFAULT 0)''')
+        id INTEGER PRIMARY KEY,
+        username TEXT,
+        full_name TEXT,
+        year TEXT,
+        points INTEGER DEFAULT 0,
+        last_active TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     
     conn.commit()
     conn.close()
 
 init_db()
 
+# ====== دوال قاعدة البيانات ======
+def add_professor(name, year, term, subject):
+    """إضافة دكتور حقيقي"""
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO professors (name, year, term, subject) VALUES (?, ?, ?, ?)',
+              (name, year, term, subject))
+    prof_id = c.lastrowid
+    conn.commit()
+    conn.close()
+    return prof_id
+
+def add_content(prof_id, content_type, title, url=None, file_path=None, description=None):
+    """إضافة محتوى حقيقي"""
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO content (prof_id, type, title, url, file_path, description) VALUES (?, ?, ?, ?, ?, ?)',
+              (prof_id, content_type, title, url, file_path, description))
+    conn.commit()
+    conn.close()
+
+def get_professor_by_name(name):
+    """البحث الحقيقي عن دكتور"""
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM professors WHERE name LIKE ?', (f'%{name}%',))
+    results = c.fetchall()
+    conn.close()
+    return results
+
+def get_professor_content(prof_id):
+    """جلب محتوى الدكتور الحقيقي"""
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM content WHERE prof_id = ? ORDER BY type', (prof_id,))
+    results = c.fetchall()
+    conn.close()
+    return results
+
+def get_all_professors():
+    """جلب كل الدكاترة"""
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM professors ORDER BY year, term, name')
+    results = c.fetchall()
+    conn.close()
+    return results
+
 # ====== الإعدادات ======
 DEVELOPER_NAME = "أحمد حمدي أحمد عثمان المقطري"
 CONTACT_NUMBERS = ["771267564", "738805009"]
 
-# ====== رسالة الترحيب القوية ======
 WELCOME_MESSAGE = f"""🎓 *مرحباً بك في بوت "عِلم"*
 
 أنا ذكاءك الأكاديمي الشخصي! 🤖
@@ -80,16 +162,72 @@ WELCOME_MESSAGE = f"""🎓 *مرحباً بك في بوت "عِلم"*
 def send_msg(chat_id, text, buttons=None):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
-    
     if buttons:
         payload["reply_markup"] = {"inline_keyboard": buttons}
-    
     try:
         requests.post(url, json=payload)
     except Exception as e:
         logger.error(f"❌ خطأ: {e}")
 
-# ====== الأزرار الرئيسية ======
+# ====== الآلة الحاسبة الحقيقية ======
+def solve_math(expr):
+    """حل المعادلات الرياضية حقيقياً"""
+    if not SYMPY_AVAILABLE:
+        return "❌ مكتبة SymPy غير مثبتة. أرسل للمدير ليثبتها."
+    
+    try:
+        # إذا كانت معادلة (تحتوي على =)
+        if '=' in expr:
+            left, right = expr.split('=')
+            left = parse_expr(left.strip())
+            right = parse_expr(right.strip())
+            equation = left - right
+            solution = solve(equation, dict=True)
+            
+            result = "✅ *الحل:*\n\n"
+            for sol in solution:
+                for var, val in sol.items():
+                    result += f"• `{var}` = `{val}`\n"
+            
+            result += f"\n📐 *خطوات الحل:*\n"
+            result += f"المعادلة: `{latex(equation)} = 0`\n"
+            result += f"التبسيط: `{latex(simplify(equation))}`"
+            return result
+        
+        # إذا كان تعبير عادي
+        else:
+            expr_parsed = parse_expr(expr)
+            result = simplify(expr_parsed)
+            return f"🔢 *النتيجة:*\n\nالتعبير: `{expr}`\nالتبسيط: `{result}`\nLaTeX: `{latex(result)}`"
+    
+    except Exception as e:
+        return f"❌ *خطأ في المعادلة*\n\nتأكد من الصياغة:\n• الضرب: `*` أو مسافة\n• الأس: `**` (مثال: x**2)\n• المتغيرات: x, y, z\n\nالخطأ: `{str(e)}`"
+
+# ====== OCR الحقيقي ======
+def ocr_solve(image_path):
+    """قراءة المعادلة من الصورة وحلها حقيقياً"""
+    if not OCR_AVAILABLE:
+        return "❌ مكتبة OCR غير مثبتة. أرسل للمدير ليثبتها."
+    
+    try:
+        # قراءة الصورة
+        img = Image.open(image_path)
+        # استخراج النص
+        text = pytesseract.image_to_string(img, lang='eng+ara')
+        # تنظيف النص
+        text = text.strip().replace('\n', ' ')
+        
+        if not text:
+            return "⚠️ لم أستطع قراءة أي نص من الصورة. تأكد أن الصورة واضحة."
+        
+        # محاولة حل المعادلة
+        result = solve_math(text)
+        return f"📸 *OCR - قراءة من الصورة*\n\nالمعادلة المقروءة: `{text}`\n\n{result}"
+    
+    except Exception as e:
+        return f"❌ خطأ في OCR: {str(e)}"
+
+# ====== الأزرار ======
 def get_years_buttons():
     return [
         [{"text": "📚 السنة الأولى", "callback_data": "year:1"}],
@@ -124,7 +262,7 @@ def webhook():
             text = data["message"].get("text", "")
             user_id = data["message"]["from"]["id"]
             
-            # ✅ الأوامر (تبدأ بـ /)
+            # ✅ الأوامر
             if text == "/start":
                 send_msg(chat_id, WELCOME_MESSAGE, get_years_buttons())
             
@@ -135,37 +273,84 @@ def webhook():
                 send_msg(chat_id, "🔢 *آلة حاسبة ذكية*\n\nأرسل المعادلة:\n`2*x + 3 = 7`\n`x**2 + 5*x - 6`\n`diff(x**2, x)` - مشتقة\n`integrate(x, x)` - تكامل")
             
             elif text == "/admin":
-                # التحقق من هوية المدير
                 if str(user_id) == str(ADMIN_ID):
-                    send_msg(chat_id, "👑 *لوحة تحكم المدير*\n\n🔐 أرسل رمز الدخول:", [
-                        [{"text": "🔙 إلغاء", "callback_data": "cancel"}]
-                    ])
+                    send_msg(chat_id, "👑 *لوحة تحكم المدير*\n\n🔐 أرسل رمز الدخول:")
                 else:
-                    send_msg(chat_id, "🚫 *غير مصرح!*\n\nهذه المنطقة محمية. تم تسجيل محاولتك.")
+                    send_msg(chat_id, "🚫 *غير مصرح!*")
             
-            # ✅ رمز الدخول (4-6 أرقام)
+            # ✅ رمز الدخول
             elif text == ADMIN_SECRET_CODE:
                 if str(user_id) == str(ADMIN_ID):
-                    send_msg(chat_id, "✅ *تم تسجيل الدخول!*\n\n👑 مرحباً يا صاحب النظام!\n\n*لوحة التحكم:*", [
+                    send_msg(chat_id, "✅ *تم تسجيل الدخول!*\n\n👑 مرحباً يا صاحب النظام!", [
                         [{"text": "➕ إضافة دكتور", "callback_data": "add_prof"}],
                         [{"text": "📊 الإحصائيات", "callback_data": "stats"}],
                         [{"text": "📢 إرسال إشعار", "callback_data": "broadcast"}],
                         [{"text": "📋 قائمة الدكاترة", "callback_data": "list_profs"}],
-                        [{"text": "🗑️ حذف محتوى", "callback_data": "delete"}],
                         [{"text": "🔒 تسجيل الخروج", "callback_data": "logout"}]
                     ])
                 else:
                     send_msg(chat_id, "❌ *رمز خاطئ!*")
             
+            # ✅ آلة حاسبة (تبدي بـ = أو رقم أو متغير)
+            elif text.startswith('=') or any(c in text for c in '0123456789xyz+-*/^'):
+                result = solve_math(text)
+                send_msg(chat_id, result)
+            
             # ✅ البحث العادي
             else:
-                # البحث الذكي
-                send_msg(chat_id, f"🤔 *بحث عن:* `{text}`\n\nجاري البحث في الدكاترة والمواد...", [
-                    [{"text": "🔍 بحث متقدم", "callback_data": f"search:{text}"}],
-                    [{"text": "📚 التنقل بين السنوات", "callback_data": "back:years"}]
-                ])
+                # البحث الحقيقي في قاعدة البيانات
+                professors = get_professor_by_name(text)
+                
+                if professors:
+                    response = f"👨‍🏫 *نتائج البحث عن:* `{text}`\n\n"
+                    for prof in professors:
+                        prof_id, name, year, term, subject, created = prof
+                        response += f"📚 *{name}*\nالسنة: {year} | الترم: {term}\nالمادة: {subject}\n\n"
+                    
+                    # جلب المحتوى
+                    content = get_professor_content(prof_id)
+                    lectures = [c for c in content if c[3] == 'lecture']
+                    videos = [c for c in content if c[3] == 'video']
+                    files = [c for c in content if c[3] == 'file']
+                    exams = [c for c in content if c[3] == 'exam']
+                    
+                    if lectures:
+                        response += f"📖 محاضرات: {len(lectures)}\n"
+                    if videos:
+                        response += f"🎥 فيديوهات: {len(videos)}\n"
+                    if files:
+                        response += f"📄 ملفات: {len(files)}\n"
+                    if exams:
+                        response += f"📝 امتحانات: {len(exams)}\n"
+                    
+                    send_msg(chat_id, response)
+                else:
+                    send_msg(chat_id, f"🤔 *لم أجد نتائج للبحث:* `{text}`\n\nجرب:\n• كتابة اسم دكتور آخر\n• /start للتنقل بين السنوات")
         
-        # ====== معالجة الأزرار (Callback) ======
+        # ====== معالجة الصور (OCR) ======
+        elif "message" in data and "photo" in data["message"]:
+            chat_id = data["message"]["chat"]["id"]
+            
+            if not OCR_AVAILABLE:
+                send_msg(chat_id, "❌ *OCR غير متاح*\n\nمكتبة OCR غير مثبتة. أرسل للمدير ليثبتها.")
+            else:
+                # تحميل الصورة
+                file_id = data["message"]["photo"][-1]["file_id"]
+                file_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}"
+                file_info = requests.get(file_url).json()
+                file_path = file_info["result"]["file_path"]
+                download_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+                
+                # تحميل الصورة
+                img_data = requests.get(download_url).content
+                with open('temp_image.jpg', 'wb') as f:
+                    f.write(img_data)
+                
+                # OCR
+                result = ocr_solve('temp_image.jpg')
+                send_msg(chat_id, result)
+        
+        # ====== معالجة الأزرار ======
         elif "callback_query" in data:
             chat_id = data["callback_query"]["message"]["chat"]["id"]
             callback = data["callback_query"]["data"]
@@ -179,10 +364,26 @@ def webhook():
                 parts = callback.split(":")
                 year, term = parts[1], parts[2]
                 term_names = {"1": "الأول", "2": "الثاني"}
-                send_msg(chat_id, f"👨‍🏫 *دكاترة السنة {year} - الترم {term_names.get(term, term)}*\n\n⚠️ لا يوجد دكاترة مسجلين بعد.\n\nيمكنك إضافتهم من لوحة التحكم (/admin)", [
-                    [{"text": "➕ إضافة دكتور", "callback_data": f"add_prof:{year}:{term}"}],
-                    [{"text": "🔙 رجوع", "callback_data": f"back:year:{year}"}]
-                ])
+                
+                # البحث الحقيقي عن دكاترة في هذا الترم
+                conn = sqlite3.connect('database.db')
+                c = conn.cursor()
+                c.execute('SELECT * FROM professors WHERE year = ? AND term = ?', (year, term))
+                professors = c.fetchall()
+                conn.close()
+                
+                if professors:
+                    response = f"👨‍🏫 *دكاترة السنة {year} - الترم {term_names.get(term, term)}*\n\n"
+                    for prof in professors:
+                        prof_id, name, y, t, subject, created = prof
+                        response += f"• *{name}* - {subject}\n"
+                    send_msg(chat_id, response, [
+                        [{"text": "🔙 رجوع", "callback_data": f"back:year:{year}"}]
+                    ])
+                else:
+                    send_msg(chat_id, f"⚠️ *لا يوجد دكاترة مسجلين في السنة {year} - الترم {term_names.get(term, term)}*\n\nيمكنك إضافتهم من لوحة التحكم (/admin)", [
+                        [{"text": "🔙 رجوع", "callback_data": f"back:year:{year}"}]
+                    ])
             
             elif callback == "calc":
                 send_msg(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:\n\n`2*x + 3 = 7`\n`x**2 + 5*x - 6`")
@@ -194,10 +395,11 @@ def webhook():
                 send_msg(chat_id, "🔍 *البحث عن دكتور*\n\nاكتب اسم الدكتور أو المادة:")
             
             elif callback == "add_prof":
-                send_msg(chat_id, "➕ *إضافة دكتور*\n\nأرسل البيانات بالشكل:\n\n`اسم الدكتور | السنة | الترم | المادة`")
+                send_msg(chat_id, "➕ *إضافة دكتور*\n\nأرسل البيانات بالشكل:\n\n`اسم الدكتور | السنة | الترم | المادة`\n\nمثال:\n`د. أحمد الصلوي | 1 | 1 | رياضيات`")
             
             elif callback == "stats":
-                send_msg(chat_id, "📊 *الإحصائيات*\n\nجاري جلب البيانات...")
+                professors = get_all_professors()
+                send_msg(chat_id, f"📊 *إحصائيات النظام*\n\nعدد الدكاترة: {len(professors)}\n\nالدكاترة المسجلين:\n" + "\n".join([f"• {p[1]} ({p[4]})" for p in professors[:10]]))
             
             elif callback == "broadcast":
                 send_msg(chat_id, "📢 *إرسال إشعار*\n\nاكتب الرسالة التي تريد إرسالها للجميع:")
