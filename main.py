@@ -1,6 +1,6 @@
 """
-🚀 بوت "عِلم" - النسخة المُصلحة
-----------------------------
+🚀 بوت "عِلم" - النسخة المُصلحة لـ Render
+-----------------------------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
 """
@@ -37,13 +37,11 @@ logger.info("✅ المتغيرات محملة!")
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, 
-    filters, CallbackQueryHandler, ConversationHandler,
-    ContextTypes
+    filters, CallbackQueryHandler, ContextTypes
 )
 
 # ====== تهيئة قاعدة البيانات ======
 def init_database():
-    """إنشاء الجداول"""
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     
@@ -128,10 +126,8 @@ WELCOME_MESSAGE = f"""
 
 # ====== دوال المعالجة ======
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """أول ما يدخل الطالب"""
     user = update.effective_user
     
-    # تسجيل النشاط
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
     cursor.execute(
@@ -141,7 +137,6 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.commit()
     conn.close()
     
-    # أزرار السنوات
     years = ["السنة الأولى", "السنة الثانية", "السنة الثالثة", "السنة الرابعة"]
     
     keyboard = []
@@ -161,7 +156,6 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """المساعدة"""
     help_text = f"""
 🆘 *مركز المساعدة - بوت "عِلم"*
 
@@ -191,7 +185,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(help_text, parse_mode='Markdown')
 
 async def calculator_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """حل المعادلات"""
     if not context.args:
         await update.message.reply_text(
             "🔢 *آلة حاسبة ذكية*\n\n"
@@ -253,7 +246,6 @@ async def calculator_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
 
 async def ocr_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """معالجة الصور"""
     await update.message.reply_text(
         "📸 *جاري تحليل الصورة...*\n\n"
         "⏳ أقوم بـ:\n"
@@ -277,7 +269,6 @@ async def ocr_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def admin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """لوحة تحكم المدير"""
     user = update.effective_user
     
     if str(user.id) != str(ADMIN_ID):
@@ -294,10 +285,7 @@ async def admin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def search_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """البحث الذكي"""
     text = update.message.text
-    
-    # الرد الذكي
     text_lower = text.lower()
     
     if any(word in text_lower for word in ['مرحبا', 'اهلا', 'سلام', 'هاي', 'هلا']):
@@ -359,7 +347,6 @@ async def search_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """معالجة الأزرار"""
     query = update.callback_query
     await query.answer()
     
@@ -409,4 +396,25 @@ if __name__ == '__main__':
     logger.info(f"🏛️ {COLLEGE_NAME}")
     logger.info("👨‍💻 المطور: أحمد حمدي أحمد عثمان المقطري")
     
-    application.run_polling()
+    # التحقق من البيئة
+    PORT = int(os.environ.get('PORT', '10000'))
+    WEBHOOK_URL = os.environ.get('RENDER_EXTERNAL_URL', '')
+    
+    if WEBHOOK_URL:
+        # تشغيل على Render (Webhook)
+        WEBHOOK_PATH = f"/{BOT_TOKEN}"
+        WEBHOOK_FULL_URL = f"{WEBHOOK_URL}{WEBHOOK_PATH}"
+        
+        logger.info(f"🌐 Webhook URL: {WEBHOOK_FULL_URL}")
+        
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            webhook_url=WEBHOOK_FULL_URL,
+            secret_token=BOT_TOKEN
+        )
+    else:
+        # تشغيل محلي (Polling)
+        logger.info("🏠 تشغيل محلي (Polling)")
+        application.run_polling()
+
