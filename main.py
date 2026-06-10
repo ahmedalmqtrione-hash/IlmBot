@@ -1,12 +1,13 @@
 """
-🚀 بوت "عِلم" - النسخة النهائية البسيطة
------------------------------------------
+🚀 بوت "عِلم" - النسخة النهائية
+--------------------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
 """
 
 import os
 import logging
+import asyncio
 from flask import Flask, request, jsonify
 from telegram import Bot, Update
 
@@ -53,6 +54,11 @@ WELCOME_MESSAGE = f"""
 🏛️ *{COLLEGE_NAME}*
 """
 
+# ====== دالة إرسال الرسائل ======
+async def send_message(chat_id, text):
+    """إرسال رسالة بشكل async"""
+    await bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
+
 # ====== Webhook Endpoint ======
 @app.route('/')
 def home():
@@ -67,14 +73,20 @@ def webhook():
             chat_id = update.message.chat_id
             text = update.message.text or ""
             
+            # إنشاء event loop جديد
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
             if text == "/start":
-                bot.send_message(chat_id, WELCOME_MESSAGE, parse_mode='Markdown')
+                loop.run_until_complete(send_message(chat_id, WELCOME_MESSAGE))
             elif text == "/help":
-                bot.send_message(chat_id, "🆘 *المساعدة*\n\nجرب: /start", parse_mode='Markdown')
+                loop.run_until_complete(send_message(chat_id, "🆘 *المساعدة*\n\nجرب: /start"))
             elif text == "/calc":
-                bot.send_message(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:", parse_mode='Markdown')
+                loop.run_until_complete(send_message(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:"))
             else:
-                bot.send_message(chat_id, f"🤔 فهمتك: {text}\n\nجرب /start", parse_mode='Markdown')
+                loop.run_until_complete(send_message(chat_id, f"🤔 فهمتك: {text}\n\nجرب /start"))
+            
+            loop.close()
         
         return jsonify({'ok': True})
     except Exception as e:
@@ -85,3 +97,4 @@ def webhook():
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', '10000'))
     app.run(host='0.0.0.0', port=PORT)
+
