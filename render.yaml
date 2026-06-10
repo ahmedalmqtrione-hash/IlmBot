@@ -1,17 +1,27 @@
 services:
   - type: web
-    name: IlmBot
+    name: IlmBot-Admin
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python main.py"
+    startCommand: "python admin_bot/main.py"
     envVars:
       - key: BOT_TOKEN
-        sync: false
+        value: 8960756644:AAFMFPCF0ZUS_jkISVI_1WOTG4IIvVn7w-E
       - key: ADMIN_ID
-        sync: false
+        value: 7890430043
       - key: ADMIN_SECRET_CODE
-        sync: false
+        value: 771267
+
+  - type: web
+    name: IlmBot-Student
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "python student_bot/main.py"
+    envVars:
+      - key: BOT_TOKEN
+        value: 8724867533:AAE4mVFqmv8CA_FhVaxkdgUvnx4_Nuhk1uI
       - key: COLLEGE_NAME
-        sync: false
+        value: كلية الحاسبات وتقنية المعلومات
 
