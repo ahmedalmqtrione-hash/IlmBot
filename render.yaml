@@ -14,3 +14,4 @@ services:
         sync: false
       - key: COLLEGE_NAME
         sync: false
+
