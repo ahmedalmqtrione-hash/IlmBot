@@ -1,6 +1,6 @@
 """
-🎓 بوت "عِلم - الطلاب" - للجميع
---------------------------------
+🎓 بوت "عِلم" - للطلاب
+----------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
 """
@@ -11,18 +11,14 @@ import sqlite3
 from flask import Flask, request, jsonify
 import requests
 
-# إعداد التسجيل
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# المتغيرات
 BOT_TOKEN = "8724867533:AAE4mVFqmv8CA_FhVaxkdgUvnx4_Nuhk1uI"
 COLLEGE_NAME = "كلية الحاسبات وتقنية المعلومات"
 
-# إنشاء Flask
 app = Flask(__name__)
 
-# ====== دالة إرسال الرسائل ======
 def send_msg(chat_id, text, buttons=None):
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
     payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
@@ -33,24 +29,25 @@ def send_msg(chat_id, text, buttons=None):
     except Exception as e:
         logger.error(f"❌ خطأ: {e}")
 
-# ====== الأزرار ======
-def get_years_buttons():
+# ====== التصميم الاحترافي ======
+def get_main_buttons():
+    """الأزرار الرئيسية - تصميم مستويات"""
     return [
-        [{"text": "📚 السنة الأولى", "callback_data": "year:1"}],
-        [{"text": "📚 السنة الثانية", "callback_data": "year:2"}],
-        [{"text": "📚 السنة الثالثة", "callback_data": "year:3"}],
-        [{"text": "📚 السنة الرابعة", "callback_data": "year:4"}],
-        [{"text": "🔗 المجموعات", "callback_data": "groups"}],
-        [{"text": "📢 القنوات", "callback_data": "channels"}],
-        [{"text": "📱 التطبيقات", "callback_data": "apps"}],
-        [{"text": "🔢 آلة حاسبة", "callback_data": "calc"}]
+        [{"text": "🎓 مستوى أول 1️⃣\nFIRST LEVEL", "callback_data": "year:1"}],
+        [{"text": "🎓 مستوى ثاني 2️⃣\nSECOND LEVEL", "callback_data": "year:2"}],
+        [{"text": "🎓 مستوى ثالث 3️⃣\nTHIRD LEVEL", "callback_data": "year:3"}],
+        [{"text": "🎓 مستوى رابع 4️⃣\nFOURTH LEVEL", "callback_data": "year:4"}],
+        [{"text": "📋 الخطة الدراسية", "callback_data": "plan"}],
+        [{"text": "🔢 آلة حاسبة ذكية", "callback_data": "calc"}],
+        [{"text": "📸 OCR - قراءة الصور", "callback_data": "ocr"}],
+        [{"text": "👨‍🏫 البحث عن دكتور", "callback_data": "search"}]
     ]
 
 def get_terms_buttons(year):
     return [
         [{"text": "📖 الترم الأول", "callback_data": f"term:{year}:1"}],
         [{"text": "📖 الترم الثاني", "callback_data": f"term:{year}:2"}],
-        [{"text": "🔙 رجوع للسنوات", "callback_data": "back:years"}]
+        [{"text": "🔙 رجوع للمستويات", "callback_data": "back:main"}]
     ]
 
 # ====== Webhook ======
@@ -71,19 +68,21 @@ def webhook():
             if text == "/start":
                 send_msg(chat_id, f"""🎓 *مرحباً بك في بوت "عِلم"*
 
+🏛️ *{COLLEGE_NAME}*
+
 أنا ذكاءك الأكاديمي الشخصي! 🤖
 
 📚 *ما يمكنك فعله:*
-• 📚 التنقل بين السنوات والترمات
+• 🎓 التنقل بين المستويات الدراسية
 • 👨‍🏫 البحث عن الدكاترة والمواد
-• 🔗 الانضمام للمجموعات
-• 📢 متابعة القنوات
-• 📱 تحميل التطبيقات
-• 🔢 آلة حاسبة
+• 🔗 الانضمام للمجموعات والقنوات
+• 📱 تحميل التطبيقات المفيدة
+• 🔢 حل المعادلات الرياضية
+• 📸 قراءة المعادلات من الصور
 
-🎯 *اختر ما تريد:*""", get_years_buttons())
+🎯 *اختر المستوى الدراسي:*""", get_main_buttons())
             
-            # ✅ البحث عن دكتور
+            # ✅ البحث العادي
             else:
                 conn = sqlite3.connect('../database.db')
                 c = conn.cursor()
@@ -95,20 +94,29 @@ def webhook():
                     response = f"👨‍🏫 *نتائج البحث:*\n\n"
                     for prof in professors:
                         prof_id, name, year, term, subject, created = prof
-                        response += f"📚 *{name}*\nالسنة: {year} | الترم: {term}\nالمادة: {subject}\n\n"
+                        response += f"📚 *{name}*\nالمستوى: {year} | الترم: {term}\nالمادة: {subject}\n\n"
                     send_msg(chat_id, response)
                 else:
-                    send_msg(chat_id, f"🤔 *لم أجد نتائج للبحث:* `{text}`\n\nجرب:\n• كتابة اسم دكتور آخر\n• /start للتنقل بين السنوات")
+                    send_msg(chat_id, f"""🤔 *لم أجد نتائج للبحث:* `{text}`
+
+🔧 *الذكاء الاصطناعي يقترح:*
+• التأكد من إملاء الاسم
+• البحث باسم المادة
+• التنقل بين المستويات
+
+🎯 *للبدء:* /start""", get_main_buttons())
         
-        # ====== معالجة الأزرار ======
+        # ====== الأزرار ======
         elif "callback_query" in data:
             chat_id = data["callback_query"]["message"]["chat"]["id"]
             callback = data["callback_query"]["data"]
             
             if callback.startswith("year:"):
                 year = callback.split(":")[1]
-                year_names = {"1": "الأولى", "2": "الثانية", "3": "الثالثة", "4": "الرابعة"}
-                send_msg(chat_id, f"📚 *السنة {year_names.get(year, year)}*\n\nاختر الترم:", get_terms_buttons(year))
+                year_names = {"1": "الأول", "2": "الثاني", "3": "الثالث", "4": "الرابع"}
+                send_msg(chat_id, f"""🎓 *المستوى {year_names.get(year, year)}*
+
+📚 *اختر الترم الدراسي:*""", get_terms_buttons(year))
             
             elif callback.startswith("term:"):
                 parts = callback.split(":")
@@ -123,12 +131,14 @@ def webhook():
                 groups = c.fetchall()
                 conn.close()
                 
-                response = f"👨‍🏫 *دكاترة السنة {year} - الترم {term_names.get(term, term)}*\n\n"
+                response = f"""🎓 *المستوى {year} - الترم {term_names.get(term, term)}*
+
+👨‍🏫 *الدكاترة:*\n"""
                 
                 if professors:
                     for prof in professors:
                         prof_id, name, y, t, subject, created = prof
-                        response += f"• *{name}* - {subject}\n"
+                        response += f"• 📚 *{name}* - {subject}\n"
                 else:
                     response += "⚠️ لا يوجد دكاترة مسجلين\n"
                 
@@ -139,78 +149,79 @@ def webhook():
                         response += f"• [{name}]({link})\n"
                 
                 send_msg(chat_id, response, [
-                    [{"text": "🔙 رجوع", "callback_data": f"back:year:{year}"}]
+                    [{"text": "🔙 رجوع للمستويات", "callback_data": "back:main"}]
                 ])
             
-            elif callback == "groups":
-                conn = sqlite3.connect('../database.db')
-                c = conn.cursor()
-                c.execute('SELECT * FROM groups')
-                groups = c.fetchall()
-                conn.close()
-                
-                if groups:
-                    response = "🔗 *المجموعات المتاحة:*\n\n"
-                    for group in groups:
-                        group_id, name, year, term, subject, link, g_type, created = group
-                        response += f"• [{name}]({link})\nالسنة: {year} | الترم: {term}\n\n"
-                    send_msg(chat_id, response)
-                else:
-                    send_msg(chat_id, "⚠️ *لا توجد مجموعات مسجلة*\n\nسيتم إضافتها قريباً!")
-            
-            elif callback == "channels":
-                conn = sqlite3.connect('../database.db')
-                c = conn.cursor()
-                c.execute('SELECT * FROM channels')
-                channels = c.fetchall()
-                conn.close()
-                
-                if channels:
-                    response = "📢 *القنوات المتاحة:*\n\n"
-                    for channel in channels:
-                        channel_id, name, link, description, created = channel
-                        response += f"• [{name}]({link})\n{description}\n\n"
-                    send_msg(chat_id, response)
-                else:
-                    send_msg(chat_id, "⚠️ *لا توجد قنوات مسجلة*\n\nسيتم إضافتها قريباً!")
-            
-            elif callback == "apps":
-                conn = sqlite3.connect('../database.db')
-                c = conn.cursor()
-                c.execute('SELECT * FROM apps')
-                apps = c.fetchall()
-                conn.close()
-                
-                if apps:
-                    response = "📱 *التطبيقات المتاحة:*\n\n"
-                    for app in apps:
-                        app_id, name, link, description, created = app
-                        response += f"• [{name}]({link})\n{description}\n\n"
-                    send_msg(chat_id, response)
-                else:
-                    send_msg(chat_id, "⚠️ *لا توجد تطبيقات مسجلة*\n\nسيتم إضافتها قريباً!")
+            elif callback == "plan":
+                send_msg(chat_id, f"""📋 *الخطة الدراسية*
+
+🏛️ *{COLLEGE_NAME}*
+
+🎓 *المستوى الأول:*
+• رياضيات 1
+• فيزياء 1
+• برمجة 1
+
+🎓 *المستوى الثاني:*
+• رياضيات 2
+• فيزياء 2
+• برمجة 2
+
+🎓 *المستوى الثالث:*
+• ذكاء اصطناعي
+• قواعد بيانات
+• شبكات
+
+🎓 *المستوى الرابع:*
+• مشروع تخرج
+• تدريب عملي""", [
+                    [{"text": "🔙 رجوع", "callback_data": "back:main"}]
+                ])
             
             elif callback == "calc":
-                send_msg(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:\n\n`2*x + 3 = 7`\n`x**2 + 5*x - 6`")
+                send_msg(chat_id, """🔢 *آلة حاسبة ذكية*
+
+📝 *أمثلة على المعادلات:*
+• `2*x + 3 = 7`
+• `x**2 + 5*x - 6`
+• `diff(x**2, x)` - مشتقة
+• `integrate(x, x)` - تكامل
+
+✨ *أرسل معادلتك الآن:*""")
             
-            elif callback.startswith("back:"):
-                if callback == "back:years":
-                    send_msg(chat_id, f"""🎓 *مرحباً بك في بوت "عِلم"*
+            elif callback == "ocr":
+                send_msg(chat_id, """📸 *OCR - قراءة الصور*
 
-أنا ذكاءك الأكاديمي الشخصي! 🤖
+📝 *أرسل صورة معادلة وسأقرأها وأحلها!*
 
-🎯 *اختر ما تريد:*""", get_years_buttons())
-                elif callback.startswith("back:year:"):
-                    year = callback.split(":")[2]
-                    year_names = {"1": "الأولى", "2": "الثانية", "3": "الثالثة", "4": "الرابعة"}
-                    send_msg(chat_id, f"📚 *السنة {year_names.get(year, year)}*\n\nاختر الترم:", get_terms_buttons(year))
+🔧 *نصائح للحصول على أفضل نتيجة:*
+• الصورة واضحة وغير مظلمة
+• الخلفية فاتحة اللون
+• المعادلة مرئية بوضوح
+• تجنب الظلال والانعكاسات""")
+            
+            elif callback == "search":
+                send_msg(chat_id, """🔍 *البحث الذكي*
+
+📝 *اكتب اسم الدكتور أو المادة:*
+
+✨ *أمثلة:*
+• "دكتور أحمد"
+• "رياضيات"
+• "برمجة"""")
+            
+            elif callback == "back:main":
+                send_msg(chat_id, f"""🎓 *مرحباً بك في بوت "عِلم"*
+
+🏛️ *{COLLEGE_NAME}*
+
+🎯 *اختر المستوى الدراسي:*""", get_main_buttons())
         
         return jsonify({'ok': True})
     except Exception as e:
         logger.error(f"❌ خطأ: {e}")
         return jsonify({'ok': False, 'error': str(e)})
 
-# ====== تشغيل ======
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', '10000'))
     app.run(host='0.0.0.0', port=PORT)
