@@ -1,5 +1,5 @@
 """
-🚀 بوت "عِلم" - الذكاء الاصطناعي الخارق
+🚀 بوت "عِلم" - النسخة النهائية العالمية
 -----------------------------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
@@ -9,24 +9,16 @@ import os
 import logging
 import sqlite3
 import re
-import json
 from flask import Flask, request, jsonify
 import requests
 
-# ====== استيراد المكتبات ======
+# ====== استيراد SymPy للحسابات ======
 try:
     from sympy import sympify, solve, simplify, latex, diff, integrate
     from sympy.parsing.sympy_parser import parse_expr
     SYMPY_AVAILABLE = True
 except:
     SYMPY_AVAILABLE = False
-
-try:
-    from PIL import Image
-    import pytesseract
-    OCR_AVAILABLE = True
-except:
-    OCR_AVAILABLE = False
 
 # إعداد التسجيل
 logging.basicConfig(level=logging.INFO)
@@ -230,24 +222,13 @@ def solve_math_smart(expr):
         else:
             return f"❌ *خطأ في المعادلة*\n\n🔧 *التصحيح التلقائي:*\n{error_msg}\n\n📝 *جرب:*\n`2*x + 3 = 7`"
 
-# ====== OCR الذكي ======
-def ocr_smart(image_path):
-    """قراءة الصور بالذكاء الاصطناعي"""
-    if not OCR_AVAILABLE:
-        return "❌ *OCR غير متاح*\n\n🔧 *الحل:*\n• تأكد من تثبيت مكتبة OCR\n• أو أرسل النص مباشرة"
-    
+# ====== OCR عبر API خارجية ======
+def ocr_api(image_url):
+    """OCR باستخدام API خارجية"""
     try:
-        img = Image.open(image_path)
-        text = pytesseract.image_to_string(img, lang='eng+ara')
-        text = text.strip().replace('\n', ' ')
-        
-        if not text:
-            return "⚠️ *لم أستطع قراءة الصورة*\n\n🔧 *نصائح:*\n• تأكد أن الصورة واضحة\n• المعادلة مرئية بوضوح\n• الخلفية فاتحة والخط غامق"
-        
-        # محاولة حل المعادلة المقروءة
-        result = solve_math_smart(text)
-        return f"📸 *OCR - الذكاء الاصطناعي*\n\nالمعادلة المقروءة: `{text}`\n\n{result}"
-    
+        # هنا يمكنك إضافة API حقيقية مثل Google Vision
+        # للآن، نستخدم وصف بسيط
+        return "📸 *OCR - الذكاء الاصطناعي*\n\n⚠️ *ملاحظة:*\nOCR المتقدم يحتاج API خارجية (Google Vision API).\n\n🔧 *الحل البديل:*\n• أرسل النص مباشرة\n• أو اكتب المعادلة يدوياً\n\n📝 *مثال:*\n`2*x + 3 = 7`"
     except Exception as e:
         return f"❌ خطأ في OCR: {str(e)}"
 
@@ -423,30 +404,23 @@ def webhook():
 
 🎯 *للبدء:* /start""")
         
-        # ====== معالجة الصور (OCR) ======
+        # ====== معالجة الصور (OCR عبر API) ======
         elif "message" in data and "photo" in data["message"]:
             chat_id = data["message"]["chat"]["id"]
             
-            if not OCR_AVAILABLE:
-                send_msg(chat_id, "❌ *OCR غير متاح حالياً*\n\n🔧 *الحل:*\n• أرسل النص مباشرة\n• أو اكتب المعادلة يدوياً")
-            else:
-                try:
-                    # تحميل الصورة
-                    file_id = data["message"]["photo"][-1]["file_id"]
-                    file_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}"
-                    file_info = requests.get(file_url).json()
-                    file_path = file_info["result"]["file_path"]
-                    download_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
-                    
-                    img_data = requests.get(download_url).content
-                    with open('temp_image.jpg', 'wb') as f:
-                        f.write(img_data)
-                    
-                    # OCR ذكي
-                    result = ocr_smart('temp_image.jpg')
-                    send_msg(chat_id, result)
-                except Exception as e:
-                    send_msg(chat_id, f"❌ خطأ في معالجة الصورة: {str(e)}")
+            try:
+                # تحميل الصورة
+                file_id = data["message"]["photo"][-1]["file_id"]
+                file_url = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={file_id}"
+                file_info = requests.get(file_url).json()
+                file_path = file_info["result"]["file_path"]
+                download_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+                
+                # OCR عبر API
+                result = ocr_api(download_url)
+                send_msg(chat_id, result)
+            except Exception as e:
+                send_msg(chat_id, f"❌ خطأ في معالجة الصورة: {str(e)}")
         
         # ====== معالجة الأزرار ======
         elif "callback_query" in data:
@@ -526,4 +500,3 @@ def webhook():
 if __name__ == '__main__':
     PORT = int(os.environ.get('PORT', '10000'))
     app.run(host='0.0.0.0', port=PORT)
-
