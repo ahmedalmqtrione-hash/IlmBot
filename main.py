@@ -1,15 +1,15 @@
 """
-🚀 بوت "عِلم" - النسخة النهائية بدون asyncio
------------------------------------------
+🚀 بوت "عِلم" - النسخة النهائية v13
+------------------------------------
 كلية الحاسبات وتقنية المعلومات
 المطور: أحمد حمدي أحمد عثمان المقطري
 """
 
 import os
 import logging
-import threading
 from flask import Flask, request, jsonify
 from telegram import Bot, Update
+from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
 
 # إعداد التسجيل
 logging.basicConfig(level=logging.INFO)
@@ -29,6 +29,9 @@ app = Flask(__name__)
 
 # إنشاء البوت
 bot = Bot(token=BOT_TOKEN)
+
+# إنشاء Dispatcher
+dispatcher = Dispatcher(bot, None, workers=0)
 
 # ====== الإعدادات ======
 DEVELOPER_NAME = "أحمد حمدي أحمد عثمان المقطري"
@@ -54,18 +57,29 @@ WELCOME_MESSAGE = f"""
 🏛️ *{COLLEGE_NAME}*
 """
 
-# ====== دالة إرسال الرسائل في thread منفصل ======
-def send_message_thread(chat_id, text):
-    """إرسال رسالة في thread منفصل"""
-    try:
-        bot.send_message(chat_id=chat_id, text=text, parse_mode='Markdown')
-    except Exception as e:
-        logger.error(f"❌ خطأ في الإرسال: {e}")
+# ====== دوال المعالجة ======
+def start_handler(update, context):
+    """أول ما يدخل الطالب"""
+    update.message.reply_text(WELCOME_MESSAGE, parse_mode='Markdown')
 
-def send_message(chat_id, text):
-    """إرسال رسالة بشكل متزامن"""
-    thread = threading.Thread(target=send_message_thread, args=(chat_id, text))
-    thread.start()
+def help_handler(update, context):
+    """المساعدة"""
+    update.message.reply_text("🆘 *المساعدة*\n\nجرب: /start", parse_mode='Markdown')
+
+def calc_handler(update, context):
+    """آلة حاسبة"""
+    update.message.reply_text("🔢 *آلة حاسبة*\n\nأرسل المعادلة:", parse_mode='Markdown')
+
+def text_handler(update, context):
+    """البحث الذكي"""
+    text = update.message.text
+    update.message.reply_text(f"🤔 فهمتك: {text}\n\nجرب /start", parse_mode='Markdown')
+
+# ====== تسجيل المعالجات ======
+dispatcher.add_handler(CommandHandler("start", start_handler))
+dispatcher.add_handler(CommandHandler("help", help_handler))
+dispatcher.add_handler(CommandHandler("calc", calc_handler))
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, text_handler))
 
 # ====== Webhook Endpoint ======
 @app.route('/')
@@ -76,20 +90,7 @@ def home():
 def webhook():
     try:
         update = Update.de_json(request.get_json(force=True), bot)
-        
-        if update.message:
-            chat_id = update.message.chat_id
-            text = update.message.text or ""
-            
-            if text == "/start":
-                send_message(chat_id, WELCOME_MESSAGE)
-            elif text == "/help":
-                send_message(chat_id, "🆘 *المساعدة*\n\nجرب: /start")
-            elif text == "/calc":
-                send_message(chat_id, "🔢 *آلة حاسبة*\n\nأرسل المعادلة:")
-            else:
-                send_message(chat_id, f"🤔 فهمتك: {text}\n\nجرب /start")
-        
+        dispatcher.process_update(update)
         return jsonify({'ok': True})
     except Exception as e:
         logger.error(f"❌ خطأ: {e}")
